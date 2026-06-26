@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Todd Rundgren — VIP Member Portal</title>
+
+  <!-- Supabase JS CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    /* ─── Reset & Base ─────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold:        #C9A84C;
+      --gold-light:  #E8C96A;
+      --gold-dim:    #7A6230;
+      --bg-page:     #0A0A0B;
+      --bg-card:     #111114;
+      --bg-input:    #18181C;
+      --bg-elevated: #1C1C21;
+      --border:      #2A2A32;
+      --border-gold: rgba(201,168,76,0.35);
+      --text-primary:   #F0EDE6;
+      --text-secondary: #8A8795;
+      --text-muted:     #4A4855;
+      --danger:      #E05252;
+      --success:     #4CAF72;
+      --radius-sm:   6px;
+      --radius-md:   12px;
+      --radius-lg:   18px;
+      --radius-xl:   24px;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg-page);
+      color: var(--text-primary);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ─── Layout ────────────────────────────────────────────────── */
+    .page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+      background:
+        radial-gradient(ellipse 60% 40% at 50% 0%, rgba(201,168,76,0.07) 0%, transparent 70%),
+        var(--bg-page);
+    }
+
+    /* ─── Header ────────────────────────────────────────────────── */
+    .portal-header {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+
+    .portal-header .wordmark {
+      font-size: 13px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 10px;
+      font-weight: 500;
+    }
+
+    .portal-header h1 {
+      font-size: 28px;
+      font-weight: 600;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+      margin-bottom: 6px;
+    }
+
+    .portal-header p {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    /* ─── Auth Card ─────────────────────────────────────────────── */
+    .auth-card {
+      width: 100%;
+      max-width: 420px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 36px 32px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Subtle top-edge gold glow */
+    .auth-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 20%; right: 20%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    }
+
+    .auth-card .card-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .auth-card .card-sub {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 28px;
+    }
+
+    /* ─── Form Elements ─────────────────────────────────────────── */
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      margin-bottom: 7px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 11px 14px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      font-family: inherit;
+    }
+
+    .form-group input::placeholder { color: var(--text-muted); }
+
+    .form-group input:focus {
+      border-color: var(--gold-dim);
+      box-shadow: 0 0 0 3px rgba(201,168,76,0.10);
+    }
+
+    /* ─── Buttons ───────────────────────────────────────────────── */
+    .btn-primary {
+      width: 100%;
+      padding: 13px;
+      background: var(--gold);
+      color: #0A0A0B;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: background 0.18s, transform 0.12s;
+      font-family: inherit;
+    }
+
+    .btn-primary:hover { background: var(--gold-light); }
+    .btn-primary:active { transform: scale(0.98); }
+
+    .btn-primary:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      width: 100%;
+      padding: 11px;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: border-color 0.18s, color 0.18s;
+      font-family: inherit;
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--gold-dim);
+      color: var(--text-primary);
+    }
+
+    /* ─── Toggle Link ───────────────────────────────────────────── */
+    .toggle-row {
+      text-align: center;
+      margin-top: 22px;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .toggle-row a {
+      color: var(--gold);
+      text-decoration: none;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .toggle-row a:hover { color: var(--gold-light); text-decoration: underline; }
+
+    /* ─── Feedback Messages ─────────────────────────────────────── */
+    .feedback {
+      font-size: 13px;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      margin-bottom: 18px;
+      display: none;
+      line-height: 1.5;
+    }
+
+    .feedback.error {
+      background: rgba(224,82,82,0.10);
+      border: 1px solid rgba(224,82,82,0.30);
+      color: #F08080;
+    }
+
+    .feedback.success {
+      background: rgba(76,175,114,0.10);
+      border: 1px solid rgba(76,175,114,0.30);
+      color: #80D4A0;
+    }
+
+    .feedback.show { display: block; }
+
+    /* ─── Divider ───────────────────────────────────────────────── */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 22px 0;
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ─── Dashboard ─────────────────────────────────────────────── */
+    #dashboard { display: none; width: 100%; max-width: 520px; }
+
+    .dash-greeting {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .dash-greeting .label {
+      font-size: 12px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 8px;
+    }
+
+    .dash-greeting h2 {
+      font-size: 26px;
+      font-weight: 600;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+    }
+
+    .dash-greeting p {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    /* ─── VIP Card ──────────────────────────────────────────────── */
+    .vip-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-gold);
+      border-radius: var(--radius-lg);
+      padding: 28px 28px 24px;
+      margin-bottom: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Top shimmer line */
+    .vip-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent 5%, var(--gold) 35%, var(--gold-light) 50%, var(--gold) 65%, transparent 95%);
+    }
+
+    /* Watermark */
+    .vip-card::after {
+      content: 'VIP';
+      position: absolute;
+      right: -8px;
+      bottom: -18px;
+      font-size: 120px;
+      font-weight: 800;
+      color: rgba(201,168,76,0.04);
+      letter-spacing: -0.04em;
+      user-select: none;
+      pointer-events: none;
+    }
+
+    .vip-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 28px;
+    }
+
+    .vip-card-brand .artist {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--gold);
+    }
+
+    .vip-card-brand .tour {
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    .vip-badge {
+      background: rgba(201,168,76,0.12);
+      border: 1px solid var(--border-gold);
+      color: var(--gold);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 4px;
+    }
+
+    .vip-card-number {
+      font-family: 'Courier New', monospace;
+      font-size: 17px;
+      letter-spacing: 0.22em;
+      color: var(--text-primary);
+      margin-bottom: 22px;
+      opacity: 0.9;
+    }
+
+    .vip-card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+
+    .vip-card-footer .field-label {
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 3px;
+    }
+
+    .vip-card-footer .field-value {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .vip-card-footer .tier-chip {
+      background: var(--gold);
+      color: #0A0A0B;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 5px 12px;
+      border-radius: 20px;
+    }
+
+    /* ─── Perks Grid ────────────────────────────────────────────── */
+    .perks-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .perk-item {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .perk-icon {
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .perk-text .perk-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .perk-text .perk-sub {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-top: 1px;
+    }
+
+    /* ─── Upcoming Shows Banner ─────────────────────────────────── */
+    .shows-banner {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 16px 18px;
+      margin-bottom: 20px;
+    }
+
+    .shows-banner .banner-title {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 12px;
+    }
+
+    .show-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+
+    .show-row:last-child { border-bottom: none; padding-bottom: 0; }
+
+    .show-row .show-date { color: var(--text-secondary); min-width: 90px; }
+    .show-row .show-venue { color: var(--text-primary); font-weight: 500; }
+    .show-row .show-city { color: var(--text-muted); font-size: 12px; text-align: right; }
+
+    /* ─── Logout area ───────────────────────────────────────────── */
+    .dash-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .btn-logout {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 8px 18px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      cursor: pointer;
+      transition: border-color 0.18s, color 0.18s;
+      font-family: inherit;
+      letter-spacing: 0.04em;
+    }
+
+    .btn-logout:hover {
+      border-color: var(--danger);
+      color: #F08080;
+    }
+
+    /* ─── Loading spinner ───────────────────────────────────────── */
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(10,10,11,0.3);
+      border-top-color: #0A0A0B;
+      border-radius: 50%;
+      animation: spin 0.65s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─── Utility ───────────────────────────────────────────────── */
+    .hidden { display: none !important; }
+
+    /* ─── Responsive ────────────────────────────────────────────── */
+    @media (max-width: 480px) {
+      .auth-card { padding: 28px 20px; }
+      .perks-grid { grid-template-columns: 1fr; }
+      .vip-card { padding: 22px 18px 20px; }
+      .vip-card-number { font-size: 14px; letter-spacing: 0.14em; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- ─── Branding Header ─────────────────────────────────────── -->
+  <header class="portal-header">
+    <p class="wordmark">Todd Rundgren</p>
+    <h1>VIP Member Portal</h1>
+    <p>Damned If I Do Tour — 2026</p>
+  </header>
+
+  <!-- ════════════════════════════════════════════════════════════
+       AUTH PANEL  (sign-up + login toggled by JS)
+  ════════════════════════════════════════════════════════════ -->
+  <div id="auth-panel" class="auth-card">
+
+    <!-- Shared feedback banner (error / success) -->
+    <div id="feedback" class="feedback" role="alert"></div>
+
+    <!-- ── Sign-Up View ───────────────────────────────────────── -->
+    <div id="view-signup">
+      <p class="card-title">Create your account</p>
+      <p class="card-sub">Join the inner circle — exclusive access awaits.</p>
+
+      <form id="form-signup" novalidate>
+        <div class="form-group">
+          <label for="signup-name">Full name</label>
+          <input id="signup-name" type="text" placeholder="Your full name" autocomplete="name" required />
+        </div>
+        <div class="form-group">
+          <label for="signup-email">Email address</label>
+          <input id="signup-email" type="email" placeholder="you@email.com" autocomplete="email" required />
+        </div>
+        <div class="form-group">
+          <label for="signup-password">Password</label>
+          <input id="signup-password" type="password" placeholder="Min. 8 characters" autocomplete="new-password" required minlength="8" />
+        </div>
+        <button type="submit" class="btn-primary" id="btn-signup">Create account</button>
+      </form>
+
+      <div class="toggle-row">
+        Already a member? <a onclick="showLogin()">Sign in</a>
+      </div>
+    </div>
+
+    <!-- ── Login View ─────────────────────────────────────────── -->
+    <div id="view-login" class="hidden">
+      <p class="card-title">Welcome back</p>
+      <p class="card-sub">Sign in to access your VIP member dashboard.</p>
+
+      <form id="form-login" novalidate>
+        <div class="form-group">
+          <label for="login-email">Email address</label>
+          <input id="login-email" type="email" placeholder="you@email.com" autocomplete="email" required />
+        </div>
+        <div class="form-group">
+          <label for="login-password">Password</label>
+          <input id="login-password" type="password" placeholder="Your password" autocomplete="current-password" required />
+        </div>
+        <button type="submit" class="btn-primary" id="btn-login">Sign in</button>
+      </form>
+
+      <div class="toggle-row">
+        New member? <a onclick="showSignup()">Create account</a>
+      </div>
+    </div>
+
+  </div><!-- /auth-panel -->
+
+
+  <!-- ════════════════════════════════════════════════════════════
+       VIP DASHBOARD  (hidden until authenticated)
+  ════════════════════════════════════════════════════════════ -->
+  <div id="dashboard">
+
+    <div class="dash-greeting">
+      <p class="label">Welcome back</p>
+      <h2 id="dash-name">Member</h2>
+      <p>Your exclusive VIP access is active.</p>
+    </div>
+
+    <!-- ── Digital VIP Access Card ───────────────────────────── -->
+    <div class="vip-card">
+      <div class="vip-card-header">
+        <div class="vip-card-brand">
+          <p class="artist">Todd Rundgren</p>
+          <p class="tour">Damned If I Do Tour · 2026</p>
+        </div>
+        <span class="vip-badge">VIP Access</span>
+      </div>
+
+      <p class="vip-card-number" id="dash-card-number">•••• •••• •••• ••••</p>
+
+      <div class="vip-card-footer">
+        <div>
+          <p class="field-label">Member name</p>
+          <p class="field-value" id="dash-card-name">—</p>
+        </div>
+        <div>
+          <p class="field-label">Valid through</p>
+          <p class="field-value">12 / 2026</p>
+        </div>
+        <span class="tier-chip">Gold</span>
+      </div>
+    </div>
+
+    <!-- ── Perks Grid ─────────────────────────────────────────── -->
+    <div class="perks-grid">
+      <div class="perk-item">
+        <span class="perk-icon">🎟</span>
+        <div class="perk-text">
+          <p class="perk-title">Priority tickets</p>
+          <p class="perk-sub">Early access to all dates</p>
+        </div>
+      </div>
+      <div class="perk-item">
+        <span class="perk-icon">📸</span>
+        <div class="perk-text">
+          <p class="perk-title">Photo op with Todd</p>
+          <p class="perk-sub">VIP Mingle package</p>
+        </div>
+      </div>
+      <div class="perk-item">
+        <span class="perk-icon">✍️</span>
+        <div class="perk-text">
+          <p class="perk-title">Autograph session</p>
+          <p class="perk-sub">One personal item</p>
+        </div>
+      </div>
+      <div class="perk-item">
+        <span class="perk-icon">🎁</span>
+        <div class="perk-text">
+          <p class="perk-title">Merch pack</p>
+          <p class="perk-sub">Limited edition · exclusive poster</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Upcoming Shows ─────────────────────────────────────── -->
+    <div class="shows-banner">
+      <p class="banner-title">Your upcoming shows</p>
+      <div class="show-row">
+        <span class="show-date">Sep 9, 2026</span>
+        <span class="show-venue">Cadogan Hall</span>
+        <span class="show-city">London, UK</span>
+      </div>
+      <div class="show-row">
+        <span class="show-date">Sep 10, 2026</span>
+        <span class="show-venue">Bristol Beacon</span>
+        <span class="show-city">Bristol, UK</span>
+      </div>
+      <div class="show-row">
+        <span class="show-date">Sep 12, 2026</span>
+        <span class="show-venue">Opera House</span>
+        <span class="show-city">Manchester, UK</span>
+      </div>
+    </div>
+
+    <!-- ── Footer ─────────────────────────────────────────────── -->
+    <div class="dash-footer">
+      <span id="dash-email-display"></span>
+      <button class="btn-logout" id="btn-logout">Sign out</button>
+    </div>
+
+  </div><!-- /dashboard -->
+
+</div><!-- /page -->
+
+
+<!-- ════════════════════════════════════════════════════════════════
+     JAVASCRIPT
+════════════════════════════════════════════════════════════════ -->
+<script>
+  /* ── Supabase init ─────────────────────────────────────────────
+     Replace these values if you ever rotate your keys.           */
+  const SUPABASE_URL  = 'https://phetulvliutqzskbsuyf.supabase.co';
+  const SUPABASE_ANON = 'sb_publishable_hWUHvG1IrP4jS3Ctn5xsag_tO_olB5q';
+
+  const { createClient } = supabase;
+  const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
+
+  /* ── DOM refs ──────────────────────────────────────────────── */
+  const authPanel    = document.getElementById('auth-panel');
+  const dashboard    = document.getElementById('dashboard');
+  const viewSignup   = document.getElementById('view-signup');
+  const viewLogin    = document.getElementById('view-login');
+  const feedbackEl   = document.getElementById('feedback');
+
+  /* ── Helpers ───────────────────────────────────────────────── */
+
+  /** Show a feedback message. type = 'error' | 'success' */
+  function showFeedback(msg, type = 'error') {
+    feedbackEl.textContent = msg;
+    feedbackEl.className   = `feedback ${type} show`;
+  }
+
+  function clearFeedback() {
+    feedbackEl.className = 'feedback';
+    feedbackEl.textContent = '';
+  }
+
+  /** Lock / unlock a submit button with a spinner while async work runs */
+  function setLoading(btn, loading, label) {
+    if (loading) {
+      btn.disabled   = true;
+      btn.innerHTML  = `<span class="spinner"></span>${label}`;
+    } else {
+      btn.disabled   = false;
+      btn.textContent = label;
+    }
+  }
+
+  /** Generate a mock VIP card number from the user's UUID */
+  function makeCardNumber(uid = '') {
+    const hex   = uid.replace(/-/g, '').substring(0, 16).toUpperCase().padEnd(16, '0');
+    const parts = hex.match(/.{1,4}/g) || ['0000','0000','0000','0000'];
+    return parts.join('  ');
+  }
+
+  /* ── View toggling ─────────────────────────────────────────── */
+  function showLogin() {
+    clearFeedback();
+    viewSignup.classList.add('hidden');
+    viewLogin.classList.remove('hidden');
+  }
+
+  function showSignup() {
+    clearFeedback();
+    viewLogin.classList.add('hidden');
+    viewSignup.classList.remove('hidden');
+  }
+
+  /* ── Show/hide dashboard vs auth ──────────────────────────── */
+  function enterDashboard(user) {
+    /* Resolve display name: prefer user_metadata.full_name, else email prefix */
+    const meta     = user.user_metadata || {};
+    const fullName = meta.full_name || meta.name || user.email.split('@')[0];
+
+    document.getElementById('dash-name').textContent        = fullName;
+    document.getElementById('dash-card-name').textContent   = fullName.toUpperCase();
+    document.getElementById('dash-card-number').textContent = makeCardNumber(user.id);
+    document.getElementById('dash-email-display').textContent = user.email;
+
+    authPanel.style.display  = 'none';
+    dashboard.style.display  = 'block';
+
+    /* Scroll to top in case page is long */
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function enterAuth() {
+    dashboard.style.display = 'none';
+    authPanel.style.display = 'block';
+    clearFeedback();
+  }
+
+  /* ── Sign-Up ───────────────────────────────────────────────── */
+  document.getElementById('form-signup').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearFeedback();
+
+    const name     = document.getElementById('signup-name').value.trim();
+    const email    = document.getElementById('signup-email').value.trim();
+    const password = document.getElementById('signup-password').value;
+    const btn      = document.getElementById('btn-signup');
+
+    /* Basic client-side validation */
+    if (!name)              return showFeedback('Please enter your full name.');
+    if (!email)             return showFeedback('Please enter your email address.');
+    if (password.length < 8) return showFeedback('Password must be at least 8 characters.');
+
+    setLoading(btn, true, 'Creating account…');
+
+    const { data, error } = await sb.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { full_name: name }   /* Stored in auth.users.raw_user_meta_data */
+      }
+    });
+
+    setLoading(btn, false, 'Create account');
+
+    if (error) {
+      /* Surface Supabase error message in plain English */
+      return showFeedback(friendlyError(error.message), 'error');
+    }
+
+    /* Supabase may require email confirmation depending on your project settings.
+       If identities array is empty, email confirmation is required.            */
+    if (data.user && data.user.identities && data.user.identities.length === 0) {
+      return showFeedback(
+        'Account created! Check your inbox and click the confirmation link, then sign in.',
+        'success'
+      );
+    }
+
+    /* Auto-login after sign-up when email confirmation is disabled */
+    if (data.session) {
+      enterDashboard(data.user);
+    } else {
+      showFeedback('Account created! Please check your email to confirm, then sign in.', 'success');
+      showLogin();
+    }
+  });
+
+  /* ── Login ─────────────────────────────────────────────────── */
+  document.getElementById('form-login').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearFeedback();
+
+    const email    = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value;
+    const btn      = document.getElementById('btn-login');
+
+    if (!email || !password) return showFeedback('Please enter your email and password.');
+
+    setLoading(btn, true, 'Signing in…');
+
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+
+    setLoading(btn, false, 'Sign in');
+
+    if (error) return showFeedback(friendlyError(error.message), 'error');
+
+    enterDashboard(data.user);
+  });
+
+  /* ── Logout ────────────────────────────────────────────────── */
+  document.getElementById('btn-logout').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-logout');
+    btn.textContent = 'Signing out…';
+    btn.disabled    = true;
+
+    await sb.auth.signOut();
+
+    btn.textContent = 'Sign out';
+    btn.disabled    = false;
+    enterAuth();
+    showLogin();
+  });
+
+  /* ── Session restore on page load ─────────────────────────── */
+  (async () => {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session && session.user) {
+      enterDashboard(session.user);
+    }
+  })();
+
+  /* Listen for auth state changes (e.g. user confirms email in another tab) */
+  sb.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_IN' && session) {
+      enterDashboard(session.user);
+    } else if (event === 'SIGNED_OUT') {
+      enterAuth();
+    }
+  });
+
+  /* ── Friendly error mapper ─────────────────────────────────── */
+  function friendlyError(msg = '') {
+    const m = msg.toLowerCase();
+    if (m.includes('invalid login') || m.includes('invalid credentials'))
+      return 'Incorrect email or password. Please try again.';
+    if (m.includes('email not confirmed'))
+      return 'Please confirm your email address before signing in.';
+    if (m.includes('already registered') || m.includes('user already exists'))
+      return 'An account with this email already exists. Try signing in instead.';
+    if (m.includes('password'))
+      return 'Password must be at least 8 characters.';
+    if (m.includes('rate limit'))
+      return 'Too many attempts — please wait a moment and try again.';
+    return msg || 'Something went wrong. Please try again.';
+  }
+</script>
+
+</body>
+</html>
